@@ -152,6 +152,8 @@ Full Model Equation:
 $$\text{Endorsement}_{i(j,k)} = \gamma_{00} + (\gamma_{10} + u_{1j}) \text{Alignment}_{k}+(\gamma_{20} + v_{2k}) \text{Alignment}_{j} +u_{0j} + v_{0k} + e_{ijk}$$
 ## Viewing the Model
 
+I'll create and view the preregistered model (equation above).
+
 ```{r Main Model}
 surveillance.model <- lmer(Endorsement.Values ~ Alignment.Values + (1 | ResponseId)+ (1 | Case), data=surveillancedt_clean)
 surveillance.model
@@ -203,6 +205,8 @@ sjPlot::plot_model(surveillance.model, type = "pred", terms = "Alignment.Values"
 ```
 ## Alternative Models
 
+I will test the random slopes to see whether they are worth including in the model.
+
 ```{r Alt Models}
 
 surveillance.model2 <- lmer(Endorsement.Values ~ Alignment.Values + (Alignment.Values | ResponseId)+ (1 | Case), data=surveillancedt_clean)
@@ -215,14 +219,17 @@ surveillance.model3 <- lmer(Endorsement.Values ~ Alignment.Values + (1 | Respons
 ranova(surveillance.model3)
 #test whether the random slope is significant
 
-##Both random slopes were significant, so I will build a model with both included
+```
+
+Both random slopes were significant, so I will build a model with both included.
+
+```{r Random Slope Model}
 
 surveillance.model4 <- lmer(Endorsement.Values ~ Alignment.Values + (Alignment.Values | ResponseId)+ (Alignment.Values | Case), data=surveillancedt_clean)
 
 summary(surveillance.model4)
 #creating and viewing a model with random slopes
 ```
-
 
 
 ## Likelihood Ratio Test
