@@ -1,0 +1,252 @@
+---
+title: "Surveillance Endorsement in Multiple Cases"
+author: "Maya Cratsley"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Load Packages
+```{r load, include=FALSE}
+library(here)  # makes reading data more consistent
+library(tidyverse)  # for data manipulation and plotting
+library(haven)  # for importing SPSS/SAS/Stata data
+library(lme4)  # for multilevel analysis
+library(lattice)  # for dotplot (working with lme4)
+library(sjPlot)  # for plotting effects
+library(MuMIn)  # for computing r-squared
+library(r2mlm)  # for computing r-squared
+library(broom.mixed)  # for summarizing results
+library(modelsummary)  # for making tables
+library(lmerTest)
+theme_set(theme_bw())  # Theme; just my personal preference
+#install and load packages, including the lme4 package (Bates,Maechler & Bolker,2012)
+
+```
+
+```{r mmps_lmer}
+#Loading Mark's function for marginal model plots
+mmps_lmer <- function(object) {
+  plot_df <- object@frame
+  form <- formula(object)
+  xvar <- attr(attr(plot_df, "terms"), "varnames.fixed")[-1]
+  plot_df$.fitted_x <- fitted(object)
+  plot_df$.fitted <- plot_df$.fitted_x
+  plot_df$.rowid <- seq_len(nrow(plot_df))
+  plot_df_long <- reshape(plot_df, direction = "long",
+                          varying = c(xvar, ".fitted_x"),
+                          v.names = "xvar",
+                          idvar = ".rowid")
+  plot_df_long$varname <- rep(c(xvar, ".fitted"),
+                              each = nrow(plot_df))
+  ggplot(
+    data = plot_df_long,
+    aes_string(x = "xvar", y = paste(form[[2]]))
+  ) +
+    geom_point(size = 0.5, alpha = 0.3) +
+    geom_smooth(aes(col = "data"), se = FALSE) +
+    geom_smooth(aes(y = .fitted, col = "model"),
+      linetype = "dashed", se = FALSE
+    ) +
+    facet_wrap(~ varname, scales = "free_x") +
+    labs(color = NULL, x = NULL) +
+    scale_color_manual(values = c("data" = "blue",
+                                  "model" = "red")) +
+    theme(legend.position = "bottom")
+}
+```
+
+## Load data
+Convert to long format
+
+```{r load}
+
+surveillancedt <- read.csv("~/Desktop/Surveillance/Endorsement/MultCase1.csv")
+#load the data into a dataframe
+
+# Convert to long format using the new `tidyr::pivot_longer()` function
+surveillancedt_long <- surveillancedt %>%
+  pivot_longer(
+    c(SOA_1:SOA_10,Endorsement_1:Endorsement_10),  # variables that are repeated measures
+    # Convert 20 columns to 3: 1 columns each for SOA/Endorsement (.value), and
+    # one column for case
+    names_to = c(".value", "Case"),
+    # Extract the names "SOA"/"Endorsement" from the names of the variables for the
+    # value columns, and then the number to the "Case" column
+    names_pattern = "(SOA|Endorsement)_([1-10])",
+    # Convert the "Case" column to integers
+    names_transform = list(Case = as.integer)
+  )
+surveillancedt_long %>% 
+  select(ResponseId, SOA, Endorsement, Case, everything())
+
+#for some reason this doesn't work and erases the data for every case besides case 1
+#so I will not be using this data for these initial analyses
+#I have a long form version already created that I will load instead
+```
+
+
+```{r data, include=FALSE}
+surveillancedt <- read.csv("~/Desktop/Surveillance/Endorsement/MultCase1_reformatted.csv")
+#load the data into a dataframe
+
+#dropping the participants with some nas
+surveillancedt_clean <- drop_na(surveillancedt)
+
+#uncomment the following if you want to check that the data loaded properly
+#View(surveillancedt)
+#head(surveillancedt)
+#tail(surveillancedt)
+#summary(surveillancedt)
+#str(surveillancedt)
+#colnames(surveillancedt)
+#which(is.na(surveillancedt)==T) #checks for missing values
+
+```
+
+## Boxplot
+
+```{r boxplot}
+boxplot(Endorsement.Values ~ Case,
+        col=c("white","lightgray"),surveillancedt_clean)
+#look at the variation in mean Endorsement between cases
+```
+On this chart, the labels are as follows:
+
+1- Your place of employment
+
+2-the police
+
+3- apple
+
+4-amazon
+
+5-google
+
+6-facebook
+
+7-The National Science Foundation
+
+8- The US Military
+
+9- The CDC
+
+10- The US government
+
+### Equations
+
+Repeated-Measure level (Lv 1):
+$$\text{Endorsement}_{i(j,k)} = \beta_{0(j, k)} + e_{ijk}$$
+
+Between-cell (Subject $\times$ Item) level (Lv 2):
+$$\beta_{0(j, k)} = \gamma_{00} + \beta_{1j} \text{Alignment}_{k}+\beta_{2k} \text{Alignment}_{j} +u_{0j} + v_{0k}$$
+Subject level (Lv 2a) random slopes
+$$\beta_{1j} = \gamma_{10} + u_{1j}$$
+
+Case level (Lv 2b) random slopes
+$$\beta_{2k} = \gamma_{20} + v_{2k}$$
+Full Model Equation:
+
+$$\text{Endorsement}_{i(j,k)} = \gamma_{00} + (\gamma_{10} + u_{1j}) \text{Alignment}_{k}+(\gamma_{20} + v_{2k}) \text{Alignment}_{j} +u_{0j} + v_{0k} + e_{ijk}$$
+## Viewing the Model
+
+```{r Main Model}
+surveillance.model <- lmer(Endorsement.Values ~ Alignment.Values + (1 | ResponseId)+ (1 | Case), data=surveillancedt_clean)
+surveillance.model
+#create and view our pre-registered mixed effects model with 1 fixed effect and 2 random intercepts
+
+summary(surveillance.model)
+#view the summary of our model to help with interpretation
+#intercept estimate tells you the anticipated endorsement level at alignment=0
+#alignment values ~i think~ tells you the expected change in endorsement per point of aligment change
+confint(surveillance.model, parm = "beta_")
+#confidence interval does not cross 0, so null is rejected ~but by how much~?
+
+```
+
+## Model Plots
+
+```{r assumptions}
+#testing for linearity by making a residuals plot using Mark's function
+mmps_lmer(surveillance.model)
+
+#Testing for homoscedasticity across Alignment Values (level 1)
+augment(surveillance.model) %>%
+  mutate(.std_resid = resid(surveillance.model, scaled = TRUE)) %>%
+  ggplot(aes(x = Alignment.Values, y = .std_resid)) +
+  geom_point(size = 0.7, alpha = 0.5) +
+  geom_smooth(se = FALSE)
+
+#Testing for normality at level 1
+library(lattice)  # need this package to use the built-in functions
+qqmath(surveillance.model)  # just use the `qqmath()` function on the fitted model
+
+#Testing for normality at other levels
+qqmath(ranef(surveillance.model, condVar = FALSE),
+       panel = function(x) {
+         panel.qqmath(x)
+         panel.qqmathline(x)
+       })
+```
+The test for linearity shows some minor deviations from linearity. Homoscedasticity is demonstrated, confirming the equal variance assumption. The normality assumption is also confirmed at the data and participant level, however there is some variance across cases.
+
+
+```{r plot}
+#plot(fitted(surveillance.model),residuals(surveillance.model))
+#another plot to check for linearity, normality & homoskedasticity 
+
+sjPlot::plot_model(surveillance.model, type = "pred", terms = "Alignment.Values", 
+                   show.data = TRUE, title = "", 
+                   dot.size = 0.5, jitter =0.2)
+```
+## Alternative Models
+
+```{r Alt Models}
+
+surveillance.model2 <- lmer(Endorsement.Values ~ Alignment.Values + (Alignment.Values | ResponseId)+ (1 | Case), data=surveillancedt_clean)
+#create a model that includes random slopes for participants
+ranova(surveillance.model2)
+#test whether the random slope is significant
+
+surveillance.model3 <- lmer(Endorsement.Values ~ Alignment.Values + (1 | ResponseId)+ (Alignment.Values | Case), data=surveillancedt_clean)
+#create a model that includes random slopes for case
+ranova(surveillance.model3)
+#test whether the random slope is significant
+
+##Both random slopes were significant, so I will build a model with both included
+
+surveillance.model4 <- lmer(Endorsement.Values ~ Alignment.Values + (Alignment.Values | ResponseId)+ (Alignment.Values | Case), data=surveillancedt_clean)
+
+summary(surveillance.model4)
+#creating and viewing a model with random slopes
+```
+
+
+
+## Likelihood Ratio Test
+
+```{r LRT}
+
+#drop1(surveillance.model, ~ Alignment.Values + (1 | ResponseId)+ (1 | Case), test = "Chisq")
+######error:number of rows in use has changed: remove missing values?###
+
+surveillance.null <- lmer(Endorsement.Values ~ (1 | ResponseId) + (1 | Case), data=surveillancedt_clean)
+surveillance.null
+
+#create and view our null model, which excludes the fixed effect of alignment
+
+anova(surveillance.null, surveillance.model)
+
+#using the anova function to perform the Likelihood Ratio Test which will compare our model to the null
+# The hypothesized model is a significant improvement on the null
+#reporting: Alignment significantly increased endorsement (chisq("DF")="chisq", p="PR(>Chisq)"). 
+
+anova(surveillance.model,surveillance.model4)
+#the model with random slopes included for both Case and Participant is a significant improvement on the hypothesized model
+
+
+```
+
+These analyses demonstrate that the hypothesized model is a significant improvement on the null model, but the alternative model, which includes random slopes, is a significant improvement on the hypothesized model. 
