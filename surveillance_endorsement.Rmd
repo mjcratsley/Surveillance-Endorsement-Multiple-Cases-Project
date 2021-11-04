@@ -7,6 +7,19 @@ output: html_document
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 ```
+## Prospectus
+
+Design:
+The study was hosted on Qualtrics, and distributed through the USC SONA system. Participants who consented to participate first read some information about "new technological tools" for tracking their internet activity. They were then asked to rate for 10 different groups (the police, google, the CDC, etc): the degree to which they see themselves as aligned with those groups (SOA- IV, mod. from Aron, Aron, & Smollan, 1992) and how much they would endorse the use of these tools by those groups (endorsement- DV). The order in which the SOA and endorsement measures will be presented was randomized, such that half of the participants saw the IV first and half the DV. Additionally, for each measure (SOA and Endorsement), the groups they were asked to evaluate were presented in a random order.
+
+The data has a cross-classified structure with level 2a representing clustering by participant and level 2b representing clustering by cases. The cluster size for participant= 10, and the cluster size for cases=~200. 
+
+Primary analyses (preregistered)
+We will use the lme4 package (Bates, Maechler & Bolker, 2012) in R to fit a linear mixed model using the restricted maximum likelihood estimation method. The only fixed effect in the model will be that of SOA on Endorsement. Participant id and target case (the police, Amazon, etc.) will be included as random intercepts to account for across-participant variations in overall endorsement of surveillance, and variation in endorsement across the various cases. Prior to running hypothesis-testing analyses, we will examine the residuals plot of the data to ensure that the data does not demonstrate any obvious deviations from homoskedasticity and normality. Provided the data doesn't violate assumptions of our analyses and we can proceed as planned, we will then perform a likelihood ratio test to compare the full model with the single fixed effect and two random effects to a null model that is identical but excludes the fixed effect of SOA on Endorsement. If the likelihood ratio test yields a p value <0.05, this will be interpreted as indicating statistical significance of the overall effect of SOA on Endorsement, and support for our hypothesis.
+
+Additional analyses: (not pre-registered)
+As an exploratory measure, we will estimate two additional models, one that includes a random slopes for participant id, and one that includes a random slope for cases. Each of these models will be tested to see whether the random slopes are significant. If either/both of the random slopes are significant, we will estimate a model that includes the significant slopes, and perform likelihood ratio tests comparing that model to the null model, as well as to the pre-registered hypothesized model. We will also calculate and report ICCs for both participant id and cases, to demonstrate that the variance across cases and across participants was non-negligible.
+
 
 ## Load Packages
 ```{r load, include=FALSE}
@@ -61,7 +74,7 @@ mmps_lmer <- function(object) {
 ## Load data
 Convert to long format
 
-```{r load}
+```{r load2}
 
 surveillancedt <- read.csv("~/Desktop/Surveillance/Endorsement/MultCase1.csv")
 #load the data into a dataframe
