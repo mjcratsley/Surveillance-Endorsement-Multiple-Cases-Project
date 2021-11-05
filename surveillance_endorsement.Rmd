@@ -114,6 +114,9 @@ surveillancedt_long %>%
 
 
 ```{r data, include=FALSE}
+
+#writing over the previous data table with my long form data file
+
 surveillancedt <- read.csv("~/Desktop/Surveillance/Endorsement/MultCase1_reformatted.csv")
 #load the data into a dataframe
 
@@ -131,7 +134,39 @@ surveillancedt_clean <- drop_na(surveillancedt)
 
 ```
 
-## Boxplot
+### Equations
+
+Repeated-Measure level (Lv 1):
+$$\text{Endorsement}_{i(j,k)} = \beta_{0(j, k)} + e_{ijk}$$
+
+Between-cell (Subject $\times$ Item) level (Lv 2):
+$$\beta_{0(j, k)} = \gamma_{00} + \beta_{1j} \text{Alignment}_{k}+\beta_{2k} \text{Alignment}_{j} +u_{0j} + v_{0k}$$
+Subject level (Lv 2a) random slopes
+$$\beta_{1j} = \gamma_{10} + u_{1j}$$
+
+Case level (Lv 2b) random slopes
+$$\beta_{2k} = \gamma_{20} + v_{2k}$$
+Full Model Equation:
+
+$$\text{Endorsement}_{i(j,k)} = \gamma_{00} + (\gamma_{10} + u_{1j}) \text{Alignment}_{k}+(\gamma_{20} + v_{2k}) \text{Alignment}_{j} +u_{0j} + v_{0k} + e_{ijk}$$
+## Building the Model
+
+I'll estimate the preregistered model (equation above).
+
+```{r Main Model}
+surveillance.model <- lmer(Endorsement.Values ~ Alignment.Values + (1 | ResponseId)+ (1 | Case), data=surveillancedt_clean)
+#create and view our pre-registered mixed effects model with 1 fixed effect and 2 random intercepts
+
+summary(surveillance.model)
+#view the summary of our model to help with interpretation
+#intercept estimate tells you the anticipated endorsement level at alignment=0
+#alignment values ~i think~ tells you the expected change in endorsement per point of aligment change
+confint(surveillance.model, parm = "beta_")
+#confidence interval does not cross 0, so null is rejected ~but by how much~?
+
+```
+
+## Visualizing the Data
 
 ```{r boxplot}
 boxplot(Endorsement.Values ~ Case,
@@ -160,40 +195,6 @@ On this chart, the labels are as follows:
 
 10- The US government
 
-### Equations
-
-Repeated-Measure level (Lv 1):
-$$\text{Endorsement}_{i(j,k)} = \beta_{0(j, k)} + e_{ijk}$$
-
-Between-cell (Subject $\times$ Item) level (Lv 2):
-$$\beta_{0(j, k)} = \gamma_{00} + \beta_{1j} \text{Alignment}_{k}+\beta_{2k} \text{Alignment}_{j} +u_{0j} + v_{0k}$$
-Subject level (Lv 2a) random slopes
-$$\beta_{1j} = \gamma_{10} + u_{1j}$$
-
-Case level (Lv 2b) random slopes
-$$\beta_{2k} = \gamma_{20} + v_{2k}$$
-Full Model Equation:
-
-$$\text{Endorsement}_{i(j,k)} = \gamma_{00} + (\gamma_{10} + u_{1j}) \text{Alignment}_{k}+(\gamma_{20} + v_{2k}) \text{Alignment}_{j} +u_{0j} + v_{0k} + e_{ijk}$$
-## Viewing the Model
-
-I'll create and view the preregistered model (equation above).
-
-```{r Main Model}
-surveillance.model <- lmer(Endorsement.Values ~ Alignment.Values + (1 | ResponseId)+ (1 | Case), data=surveillancedt_clean)
-surveillance.model
-#create and view our pre-registered mixed effects model with 1 fixed effect and 2 random intercepts
-
-summary(surveillance.model)
-#view the summary of our model to help with interpretation
-#intercept estimate tells you the anticipated endorsement level at alignment=0
-#alignment values ~i think~ tells you the expected change in endorsement per point of aligment change
-confint(surveillance.model, parm = "beta_")
-#confidence interval does not cross 0, so null is rejected ~but by how much~?
-
-```
-
-## Model Plots
 
 ```{r assumptions}
 #testing for linearity by making a residuals plot using Mark's function
@@ -216,21 +217,59 @@ qqmath(ranef(surveillance.model, condVar = FALSE),
          panel.qqmath(x)
          panel.qqmathline(x)
        })
+
+#plot(fitted(surveillance.model),residuals(surveillance.model))
+#another plot I could use to check for linearity, normality & homoskedasticity 
 ```
 The test for linearity shows some minor deviations from linearity. Homoscedasticity is demonstrated, confirming the equal variance assumption. The normality assumption is also confirmed at the data and participant level, however there is some variance across cases.
 
+## Model Estimates
+
+```{r calculate ICCs}
+#calculate ICC for Endorsement based on our two intercepts
+
+
+surveillance.null <- lmer(Endorsement.Values ~ (1 | ResponseId) + (1 | Case), data=surveillancedt_clean)
+#create our null model, which excludes the fixed effect of alignment
+
+vc_null <- as.data.frame(VarCorr(surveillance.null))
+# Proportion of variance at the within-cell level
+icc_e <- vc_null$vcov[3] / sum(vc_null$vcov)
+
+# ICC/Deff (person; cluster size= 266
+icc_person <- vc_null$vcov[1] / sum(vc_null$vcov)
+c("ICC(person)" = icc_person,
+"Deff(person)" = icc_e + 266 * icc_person)
+
+# ICC/Deff (Case; cluster size = 10)
+icc_case <- vc_null$vcov[2] / sum(vc_null$vcov)
+c("ICC(case)" = icc_case,
+"Deff(case)" = icc_e + 10 * icc_case)
+
+```
+
+The ICC for "the variance between "ResponseId"  is 0.4137, indicating that 41% of the variance in endorsement is explained by between-person differences. The ICC for "Case" is 0.0681, indicating that 6% of the variance in endorsement is explained by differences between cases. Thus, it seems that it was appropriate to include these two random intercepts into the model.
+
+```{r summary table}
+msummary(list(Estimate = surveillance.model, `95% CI` = surveillance.model),
+estimate = c("estimate", "[{conf.low}, {conf.high}]"),
+statistic = NULL, # suppress the extra rows for SEs
+title = "Parameter Estimates of Multilevel Model",
+gof_omit = ".*")
+
+```
 
 ```{r plot}
-#plot(fitted(surveillance.model),residuals(surveillance.model))
-#another plot to check for linearity, normality & homoskedasticity 
-
+#plotting the model predictions next to the data
 sjPlot::plot_model(surveillance.model, type = "pred", terms = "Alignment.Values", 
                    show.data = TRUE, title = "", 
                    dot.size = 0.5, jitter =0.2)
 ```
+
+
 ## Alternative Models
 
-I will test the random slopes to see whether they are worth including in the model.
+I will also test random slopes for Case and ResponseId to see whether they are worth including in the model.
 
 ```{r Alt Models}
 
@@ -261,13 +300,9 @@ summary(surveillance.model4)
 
 ```{r LRT}
 
-#drop1(surveillance.model, ~ Alignment.Values + (1 | ResponseId)+ (1 | Case), test = "Chisq")
-######error:number of rows in use has changed: remove missing values?###
-
-surveillance.null <- lmer(Endorsement.Values ~ (1 | ResponseId) + (1 | Case), data=surveillancedt_clean)
 surveillance.null
 
-#create and view our null model, which excludes the fixed effect of alignment
+#view our null model, which excludes the fixed effect of alignment
 
 anova(surveillance.null, surveillance.model)
 
@@ -281,4 +316,4 @@ anova(surveillance.model,surveillance.model4)
 
 ```
 
-These analyses demonstrate that the hypothesized model is a significant improvement on the null model, but the alternative model, which includes random slopes, is a significant improvement on the hypothesized model. 
+The likelihood ration tests demonstrate that the hypothesized model is a significant improvement on the null model, but the alternative model, which includes random slopes, is a significant improvement on the hypothesized model.These results largely indicate that Alignment was a significant predictor of Endorsement, such that a 1 point increase in Alignment predicted about a 0.3 point increase in endorsement. This provides support for the theoretical perspective being tested.
