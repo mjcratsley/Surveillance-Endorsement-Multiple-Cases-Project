@@ -198,7 +198,7 @@ On this chart, the labels are as follows:
 10- The US government
 
 
-```{r assumptions}
+```{r assumption check}
 #testing for linearity by making a residuals plot using Mark's function
 mmps_lmer(surveillance.model)
 
