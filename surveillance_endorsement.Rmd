@@ -102,7 +102,7 @@ surveillancedt_long <- surveillancedt %>%
     names_to = c(".value", "Case"),
     # Extract the names "SOA"/"Endorsement" from the names of the variables for the
     # value columns, and then the number to the "Case" column
-    names_pattern = "(SOA|Endorsement)_([1-10])",
+    names_pattern = "(SOA|Endorsement)_(.*)",
     # Convert the "Case" column to integers
     names_transform = list(Case = as.integer)
   )
