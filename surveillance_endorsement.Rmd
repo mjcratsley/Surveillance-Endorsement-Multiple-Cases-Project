@@ -116,22 +116,17 @@ surveillancedt_long %>%
 ```{r data, include=FALSE}
 
 #dropping the participants with nas in our primary variables
-surveillancedt_long %>% drop_na(SOA)
-surveillancedt_long %>% drop_na(Endorsement)
-surveillancedt_long %>% drop_na(Case)
+
+
+surveillancedt_clean <- surveillancedt_long %>% drop_na(SOA, Endorsement, Case)
 
 ##for some reason I'm now once again getting an error with the ranova function: 
 #Error in anova.merMod(surveillance.null, surveillance.model) : models were not all fitted to the same size of dataset
 
 #uncomment the following if you want to check that the data loaded properly
-#View(surveillancedt)
-#head(surveillancedt)
-#tail(surveillancedt)
-#summary(surveillancedt)
-#str(surveillancedt)
-#colnames(surveillancedt)
-#which(is.na(surveillancedt)==T) #checks for missing values
-
+#summary(surveillancedt_clean$SOA)
+#summary(surveillancedt_clean$Case)
+#summary(surveillancedt_clean$Endorsement)
 ```
 
 ### Equations
@@ -154,7 +149,7 @@ $$\text{Endorsement}_{i(j,k)} = \gamma_{00} + (\gamma_{10} + u_{1j}) \text{Align
 I'll estimate the preregistered model (equation above).
 
 ```{r Main Model}
-surveillance.model <- lmer( Endorsement ~ SOA + (1 | ResponseId)+ (1 | Case), data=surveillancedt_long)
+surveillance.model <- lmer( Endorsement ~ SOA + (1 | ResponseId)+ (1 | Case), data=surveillancedt_clean)
 #create and view our pre-registered mixed effects model with 1 fixed effect and 2 random intercepts
 
 summary(surveillance.model)
@@ -170,7 +165,7 @@ confint(surveillance.model, parm = "beta_")
 
 ```{r boxplot}
 boxplot(Endorsement ~ Case,
-        col=c("white","lightgray"),surveillancedt_long)
+        col=c("white","lightgray"),surveillancedt_clean)
 #look at the variation in mean Endorsement between cases
 ```
 On this chart, the labels are as follows:
@@ -229,7 +224,7 @@ The test for linearity shows some minor deviations from linearity. Homoscedastic
 #calculate ICC for Endorsement based on our two intercepts
 
 
-surveillance.null <- lmer(Endorsement ~ (1 | ResponseId) + (1 | Case), data=surveillancedt_long)
+surveillance.null <- lmer(Endorsement ~ (1 | ResponseId) + (1 | Case), data=surveillancedt_clean)
 #create our null model, which excludes the fixed effect of alignment
 
 vc_null <- as.data.frame(VarCorr(surveillance.null))
@@ -273,12 +268,12 @@ I will also test random slopes for Case and ResponseId to see whether they are w
 
 ```{r Alt Models}
 
-surveillance.model2 <- lmer(Endorsement ~ SOA + (SOA | ResponseId)+ (1 | Case), data=surveillancedt_long)
+surveillance.model2 <- lmer(Endorsement ~ SOA + (SOA | ResponseId)+ (1 | Case), data=surveillancedt_clean)
 #create a model that includes random slopes for participants
 ranova(surveillance.model2)
 #test whether the random slope is significant
 
-surveillance.model3 <- lmer(Endorsement ~ SOA + (1 | ResponseId)+ (SOA | Case), data=surveillancedt_long)
+surveillance.model3 <- lmer(Endorsement ~ SOA + (1 | ResponseId)+ (SOA | Case), data=surveillancedt_clean)
 #create a model that includes random slopes for case
 ranova(surveillance.model3)
 #test whether the random slope is significant
@@ -289,7 +284,7 @@ Both random slopes were significant, so I will build a model with both included.
 
 ```{r Random Slope Model}
 
-surveillance.model4 <- lmer(Endorsement ~ SOA + (SOA | ResponseId)+ (SOA | Case), data=surveillancedt_long)
+surveillance.model4 <- lmer(Endorsement ~ SOA + (SOA | ResponseId)+ (SOA | Case), data=surveillancedt_clean)
 
 summary(surveillance.model4)
 #creating and viewing a model with random slopes
