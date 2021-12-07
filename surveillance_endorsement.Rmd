@@ -2,6 +2,7 @@
 title: "Surveillance Endorsement in Multiple Cases"
 author: "Maya Cratsley"
 output:
+  pdf_document: default
   word_document: default
   html_document: default
 ---
@@ -116,12 +117,7 @@ surveillancedt_long %>%
 ```{r data, include=FALSE}
 
 #dropping the participants with nas in our primary variables
-
-
 surveillancedt_clean <- surveillancedt_long %>% drop_na(SOA, Endorsement, Case)
-
-##for some reason I'm now once again getting an error with the ranova function: 
-#Error in anova.merMod(surveillance.null, surveillance.model) : models were not all fitted to the same size of dataset
 
 #uncomment the following if you want to check that the data loaded properly
 #summary(surveillancedt_clean$SOA)
