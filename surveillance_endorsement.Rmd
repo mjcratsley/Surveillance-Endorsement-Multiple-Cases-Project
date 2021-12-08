@@ -2,9 +2,9 @@
 title: "Surveillance Endorsement in Multiple Cases"
 author: "Maya Cratsley"
 output:
-  pdf_document: default
   word_document: default
   html_document: default
+  pdf_document: default
 ---
 
 ```{r setup, include=FALSE}
