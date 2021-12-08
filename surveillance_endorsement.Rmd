@@ -46,6 +46,8 @@ library(lattice)  # for dotplot (working with lme4)
 library(sjPlot)  # for plotting effects
 library(MuMIn)  # for computing r-squared
 library(r2mlm)  # for computing r-squared
+library(boot) # for bootstrapping
+library(bootmlm) # for bootstrapping
 library(broom.mixed)  # for summarizing results
 library(modelsummary)  # for making tables
 library(lmerTest)
@@ -307,6 +309,9 @@ surveillance.model4 <- lmer(Endorsement ~ SOA + (SOA | ResponseId)+ (SOA | Case)
 
 summary(surveillance.model4)
 #creating and viewing a model with random slopes
+
+
+confint(surveillance.model4, parm = "beta_")
 ```
 
 
@@ -331,3 +336,11 @@ msummary(list(surveillance.model, surveillance.model4))
 ```
 
 The likelihood ration tests demonstrate that the hypothesized model is a significant improvement on the null model, but the alternative model, which includes random slopes, is a significant improvement on the hypothesized model.These results largely indicate that Alignment was a significant predictor of Endorsement, such that a 1 point increase in Alignment predicted about a 0.3 point increase in endorsement. This provides support for the theoretical perspective being tested.
+
+```{r bootstrapping model 1}
+r.squaredGLMM(surveillance.model) #returns the marginal and conditional Rsquared
+boo_r2 <- bootstrap_mer(surveillance.model, MuMIn::r.squaredGLMM, nsim = 999,
+type = "residual")
+boot.ci(boo_r2, index = 1, type = "perc")
+```
+
