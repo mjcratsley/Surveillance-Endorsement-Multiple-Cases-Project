@@ -127,23 +127,42 @@ surveillancedt_clean <- surveillancedt_long %>% drop_na(SOA, Endorsement, Case)
 
 ### Equations
 
+Pre-registered Model 
+
 Repeated-Measure level (Lv 1):
-$$\text{Endorsement}_{i(j,k)} = \beta_{0(j, k)} + e_{ijk}$$
-
+$$\text{Endorsement}_{i(j,k)} = \beta_{0(j, k)} +\beta_{1j} \text{SOA}_{k} + e_{ijk}$$
 Between-cell (Subject $\times$ Item) level (Lv 2):
-$$\beta_{0(j, k)} = \gamma_{00} + \beta_{1j} \text{Alignment}_{k}+\beta_{2k} \text{Alignment}_{j} +u_{0j} + v_{0k}$$
-Subject level (Lv 2a) random slopes
-$$\beta_{1j} = \gamma_{10} + u_{1j}$$
 
-Case level (Lv 2b) random slopes
-$$\beta_{2k} = \gamma_{20} + v_{2k}$$
+$$
+\begin{aligned}
+  \beta_{0(j,k)} & = \gamma_{00} + u_{0j} +v_{0k}  \\
+  \beta_{1j} & = \gamma_{10}
+\end{aligned}
+$$
+In this equation, $u_{0j}$ represents the deviation of the intercept of participant $j$ from the average intercept (i.e. $\gamma_{00}$), and $v_{0k}$ represents the deviation of the intercept of case $k$ from the average intercept. 
+
 Pre-registered Model Equation:
 
-$$\text{Endorsement}_{i(j,k)} = \gamma_{00} + (\gamma_{10}) \text{SOA}_{k}+(\gamma_{20}) \text{SOA}_{j} +u_{0j} + v_{0k} + e_{ijk}$$
+$$\text{Endorsement}_{i(j,k)} = \gamma_{00} +\gamma_{10} \text{SOA}_{k} + e_{ijk} + u_{0j} +v_{0k}$$
 
+Final Model:
+
+Repeated-Measure level (Lv 1):
+$$\text{Endorsement}_{i(j,k)} = \beta_{0(j, k)} +\beta_{1j} \text{SOA}_{k} + e_{ijk}$$
+Between-cell (Subject $\times$ Item) level (Lv 2):
+
+$$
+\begin{aligned}
+  \beta_{0(j,k)} & = \gamma_{00} + u_{0j} +v_{0k}  \\
+  \beta_{1j} & = \gamma_{10} + u_{1j} + v_{1k}
+\end{aligned}
+$$
+We've now introduced two new terms, with, $u_{1j}$ represents the deviation of the slope of participant $j$ from the average slope (i.e., $\gamma_{10}$), and $v_{1k}$ represents the deviation of the slope of case $k$ from the average slope. 
 Final Model Equation:
 
-$$\text{Endorsement}_{i(j,k)} = \gamma_{00} + (\gamma_{10} + u_{1j}) \text{SOA}_{k}+(\gamma_{20} + v_{2k}) \text{SOA}_{j} +u_{0j} + v_{0k} + e_{ijk}$$
+$$\text{Endorsement}_{i(j,k)} = \gamma_{00} +\gamma_{10} \text{SOA}_{k} + u_{1j}\text{SOA}_{k} + v_{1k}\text{SOA}_{k} + e_{ijk} + u_{0j} +v_{0k}$$
+
+
 ## Building the Model
 
 I'll estimate the preregistered model (equation above).
