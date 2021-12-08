@@ -137,9 +137,13 @@ $$\beta_{1j} = \gamma_{10} + u_{1j}$$
 
 Case level (Lv 2b) random slopes
 $$\beta_{2k} = \gamma_{20} + v_{2k}$$
-Full Model Equation:
+Pre-registered Model Equation:
 
-$$\text{Endorsement}_{i(j,k)} = \gamma_{00} + (\gamma_{10} + u_{1j}) \text{Alignment}_{k}+(\gamma_{20} + v_{2k}) \text{Alignment}_{j} +u_{0j} + v_{0k} + e_{ijk}$$
+$$\text{Endorsement}_{i(j,k)} = \gamma_{00} + (\gamma_{10}) \text{SOA}_{k}+(\gamma_{20}) \text{SOA}_{j} +u_{0j} + v_{0k} + e_{ijk}$$
+
+Final Model Equation:
+
+$$\text{Endorsement}_{i(j,k)} = \gamma_{00} + (\gamma_{10} + u_{1j}) \text{SOA}_{k}+(\gamma_{20} + v_{2k}) \text{SOA}_{j} +u_{0j} + v_{0k} + e_{ijk}$$
 ## Building the Model
 
 I'll estimate the preregistered model (equation above).
@@ -304,7 +308,7 @@ anova(surveillance.null, surveillance.model)
 anova(surveillance.model,surveillance.model4)
 #the model with random slopes included for both Case and Participant is a significant improvement on the hypothesized model
 
-
+msummary(list(surveillance.model, surveillance.model4))
 ```
 
 The likelihood ration tests demonstrate that the hypothesized model is a significant improvement on the null model, but the alternative model, which includes random slopes, is a significant improvement on the hypothesized model.These results largely indicate that Alignment was a significant predictor of Endorsement, such that a 1 point increase in Alignment predicted about a 0.3 point increase in endorsement. This provides support for the theoretical perspective being tested.
